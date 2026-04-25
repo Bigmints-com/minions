@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# minions — Execute a queue of Gemini CLI prompts sequentially
+# minions — Execute a queue of AI CLI prompts sequentially
 # Usage: minions --queue <file.yaml> [options]
 set -euo pipefail
 
@@ -36,7 +36,7 @@ dim()  { echo -e "${DIM}$*${NC}"; }
 
 usage() {
   cat <<EOF
-${BOLD}minions${NC} v${VERSION} — Batch prompt scheduler for Gemini CLI
+${BOLD}minions${NC} v${VERSION} — Batch prompt scheduler for AI CLIs
 
 ${BOLD}USAGE${NC}
   minions --queue <file.yaml> [options]
@@ -44,12 +44,12 @@ ${BOLD}USAGE${NC}
 
 ${BOLD}OPTIONS${NC}
   --queue <file>           Path to YAML prompt queue file (required)
-  --workdir <dir>          Working directory for Gemini CLI (default: .)
+  --workdir <dir>          Working directory for prompts (default: .)
   --approval-mode <mode>   default | auto_edit | yolo (default: yolo)
   --dry-run                Print prompts without executing
   --parallel               Run all prompts concurrently
   --continue-on-error      Don't abort on prompt failure
-  --model <model>          Override Gemini model
+  --model <model>          Override AI model
   --sandbox                Run in sandbox mode
   --delay <seconds>        Wait between prompts (default: 2)
   --log-dir <dir>          Directory for run logs (default: ./runs/)
@@ -85,8 +85,8 @@ if [[ $# -gt 0 && "$1" == "init" ]]; then
   echo -e "${CYAN}Initializing minions skill in $TARGET_DIR...${NC}"
   mkdir -p "$TARGET_DIR"
   
-  if [[ -f "$REPO_DIR/README.md" ]]; then
-    cp "$REPO_DIR/README.md" "$TARGET_DIR/SKILL.md"
+  if [[ -f "$REPO_DIR/base-skill.md" ]]; then
+    cp "$REPO_DIR/base-skill.md" "$TARGET_DIR/SKILL.md"
     echo -e "${GREEN}✅ Successfully copied base skill to $TARGET_DIR/SKILL.md${NC}"
   else
     echo -e "${RED}❌ Could not find base skill file in $REPO_DIR${NC}"
@@ -117,7 +117,7 @@ done
 # ─── Validate ────────────────────────────────────────────────────────────────────
 [[ -z "$QUEUE_FILE" ]] && die "Missing required --queue <file.yaml>. Use --help for usage."
 [[ ! -f "$QUEUE_FILE" ]] && die "Queue file not found: $QUEUE_FILE"
-command -v gemini &>/dev/null || die "Gemini CLI not found. Install it first: https://github.com/google-gemini/gemini-cli"
+command -v gemini &>/dev/null || warn "Executable not found in path"
 
 case "$APPROVAL_MODE" in
   default|auto_edit|yolo) ;;
