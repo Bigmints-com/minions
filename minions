@@ -46,7 +46,7 @@ minions v${VERSION} — Batch prompt scheduler for AI CLIs
 USAGE
   minions --queue <file.yaml> [options]
   minions cli        (Select default AI CLI)
-  minions init       (Initialize Fikr skill)
+  minions init       (Initialize agent skill)
 
 OPTIONS
   --queue <file>     Path to YAML queue file (required)
