@@ -41,41 +41,23 @@ dim()  { echo -e "${DIM}$*${NC}"; }
 
 usage() {
   cat <<EOF
-${BOLD}minions${NC} v${VERSION} — Batch prompt scheduler for AI CLIs
+minions v${VERSION} — Batch prompt scheduler for AI CLIs
 
-${BOLD}USAGE${NC}
+USAGE
   minions --queue <file.yaml> [options]
-  minions init                   Initialize minions skill in current project
-  minions cli                    Scan and select your default AI CLI
+  minions cli        (Select default AI CLI)
+  minions init       (Initialize Fikr skill)
 
-${BOLD}OPTIONS${NC}
-  --queue <file>           Path to YAML prompt queue file (required)
-  --workdir <dir>          Working directory for prompts (default: .)
-  --approval-mode <mode>   default | auto_edit | yolo (default: yolo)
-  --dry-run                Print prompts without executing
-  --parallel               Run all prompts concurrently
-  --continue-on-error      Don't abort on prompt failure
-  --model <model>          Override AI model
-  --cli <name>             Target AI CLI command (default: pi)
-  --sandbox                Run in sandbox mode
-  --delay <seconds>        Wait between prompts (default: 2)
-  --log-dir <dir>          Directory for run logs (default: ./runs/)
-  --version                Show version
-  --help                   Show this help
-
-${BOLD}PROMPT QUEUE FORMAT${NC} (YAML)
-  queue:
-    - name: "Task label"
-      prompt: "Your prompt here"
-      workdir: /optional/override
-      model: optional-model
-      cli: optional-cli
-      approval_mode: optional-override
-
-${BOLD}EXAMPLES${NC}
-  minions --queue tasks.yaml --workdir ~/myproject
-  minions --queue tasks.yaml --dry-run
-  minions --queue tasks.yaml --approval-mode auto_edit --sandbox
+OPTIONS
+  --queue <file>     Path to YAML queue file (required)
+  --cli <name>       Target CLI (default: pi)
+  --workdir <dir>    Working directory (default: .)
+  --approval-mode    yolo (default), auto_edit, default
+  --model <model>    Override AI model
+  --dry-run          Print prompts without executing
+  --parallel         Run all prompts concurrently
+  --sandbox          Run in sandbox mode
+  --help             Show this help
 EOF
 }
 
