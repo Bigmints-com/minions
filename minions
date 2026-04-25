@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# pi — Execute a queue of Gemini CLI prompts sequentially
-# Usage: pi --queue <file.yaml> [options]
+# minions — Execute a queue of Gemini CLI prompts sequentially
+# Usage: minions --queue <file.yaml> [options]
 set -euo pipefail
 
 VERSION="1.0.0"
@@ -36,11 +36,11 @@ dim()  { echo -e "${DIM}$*${NC}"; }
 
 usage() {
   cat <<EOF
-${BOLD}pi${NC} v${VERSION} — Batch prompt scheduler for Gemini CLI
+${BOLD}minions${NC} v${VERSION} — Batch prompt scheduler for Gemini CLI
 
 ${BOLD}USAGE${NC}
-  pi --queue <file.yaml> [options]
-  pi init                   Initialize minions skill in current project
+  minions --queue <file.yaml> [options]
+  minions init                   Initialize minions skill in current project
 
 ${BOLD}OPTIONS${NC}
   --queue <file>           Path to YAML prompt queue file (required)
@@ -65,9 +65,9 @@ ${BOLD}PROMPT QUEUE FORMAT${NC} (YAML)
       approval_mode: optional-override
 
 ${BOLD}EXAMPLES${NC}
-  pi --queue tasks.yaml --workdir ~/myproject
-  pi --queue tasks.yaml --dry-run
-  pi --queue tasks.yaml --approval-mode auto_edit --sandbox
+  minions --queue tasks.yaml --workdir ~/myproject
+  minions --queue tasks.yaml --dry-run
+  minions --queue tasks.yaml --approval-mode auto_edit --sandbox
 EOF
 }
 
@@ -275,7 +275,7 @@ build_gemini_cmd() {
 # ─── Main Execution ─────────────────────────────────────────────────────────────
 main() {
   echo ""
-  echo -e "${BOLD}${CYAN}⚡ pi${NC} v${VERSION}"
+  echo -e "${BOLD}${CYAN}⚡ minions${NC} v${VERSION}"
   echo -e "${DIM}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 
   # Parse the queue file
@@ -313,7 +313,7 @@ main() {
   if ! $DRY_RUN; then
     mkdir -p "$LOG_DIR"
     {
-      echo "# pi run log"
+      echo "# minions run log"
       echo "# Started: $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
       echo "# Queue:   $QUEUE_FILE"
       echo "# Workdir: $WORKDIR"
