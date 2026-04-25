@@ -24,6 +24,10 @@ PARALLEL=false
 CONTINUE_ON_ERROR=false
 MODEL=""
 CLI="pi"
+if [[ -f ~/.minionsrc ]]; then
+  source ~/.minionsrc
+  [[ -n "${DEFAULT_CLI:-}" ]] && CLI="$DEFAULT_CLI"
+fi
 SANDBOX=false
 DELAY=2
 LOG_DIR="./runs"
@@ -42,6 +46,7 @@ ${BOLD}minions${NC} v${VERSION} — Batch prompt scheduler for AI CLIs
 ${BOLD}USAGE${NC}
   minions --queue <file.yaml> [options]
   minions init                   Initialize minions skill in current project
+  minions cli                    Scan and select your default AI CLI
 
 ${BOLD}OPTIONS${NC}
   --queue <file>           Path to YAML prompt queue file (required)
@@ -95,6 +100,38 @@ if [[ $# -gt 0 && "$1" == "init" ]]; then
     echo -e "${RED}❌ Could not find base skill file in $REPO_DIR${NC}"
     exit 1
   fi
+  exit 0
+fi
+
+# ─── CLI Selection Command ───────────────────────────────────────────────────────
+if [[ $# -gt 0 && "$1" == "cli" ]]; then
+  echo -e "${CYAN}Scanning for installed AI CLIs...${NC}"
+  KNOWN_CLIS=("pi" "gemini" "claude" "chatgpt" "aider" "copilot" "fabric" "cursor-agent" "ubot")
+  INSTALLED=()
+  for c in "${KNOWN_CLIS[@]}"; do
+    if command -v "$c" &>/dev/null; then
+      INSTALLED+=("$c")
+    fi
+  done
+  
+  if [[ ${#INSTALLED[@]} -eq 0 ]]; then
+    echo -e "${RED}No known AI CLIs found installed on your system.${NC}"
+    exit 1
+  fi
+  
+  echo -e "\n${BOLD}Select your default AI CLI for Minions:${NC}"
+  PS3="Enter number: "
+  select opt in "${INSTALLED[@]}" "Cancel"; do
+    if [[ "$opt" == "Cancel" ]]; then
+      exit 0
+    elif [[ -n "$opt" ]]; then
+      echo "DEFAULT_CLI=\"$opt\"" > ~/.minionsrc
+      echo -e "${GREEN}✅ Default CLI set to '${BOLD}$opt${NC}${GREEN}' globally!${NC}"
+      exit 0
+    else
+      echo "Invalid option. Try again."
+    fi
+  done
   exit 0
 fi
 

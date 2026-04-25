@@ -45,6 +45,15 @@ minions init
 ```
 *Creates `.agents/skills/minions/SKILL.md` with instructions for your agents.*
 
+## Setting a Default CLI
+
+If you want to permanently change your global default CLI from `pi` to something else (e.g. `gemini` or `claude`), you can run the interactive setup tool:
+
+```bash
+minions cli
+```
+*This will scan your system for installed AI tools and let you pick your favorite default (saves to `~/.minionsrc`).*
+
 ## CLI Flags Reference
 
 | Flag | Description | Default |
