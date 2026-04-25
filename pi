@@ -40,6 +40,7 @@ ${BOLD}pi${NC} v${VERSION} — Batch prompt scheduler for Gemini CLI
 
 ${BOLD}USAGE${NC}
   pi --queue <file.yaml> [options]
+  pi init                   Initialize minions skill in current project
 
 ${BOLD}OPTIONS${NC}
   --queue <file>           Path to YAML prompt queue file (required)
@@ -69,6 +70,30 @@ ${BOLD}EXAMPLES${NC}
   pi --queue tasks.yaml --approval-mode auto_edit --sandbox
 EOF
 }
+
+# ─── Init Command ────────────────────────────────────────────────────────────────
+if [[ $# -gt 0 && "$1" == "init" ]]; then
+  SOURCE="${BASH_SOURCE[0]}"
+  while [ -h "$SOURCE" ]; do
+    DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+    SOURCE="$(readlink "$SOURCE")"
+    [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE"
+  done
+  REPO_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+
+  TARGET_DIR=".agents/skills/minions"
+  echo -e "${CYAN}Initializing minions skill in $TARGET_DIR...${NC}"
+  mkdir -p "$TARGET_DIR"
+  
+  if [[ -f "$REPO_DIR/README.md" ]]; then
+    cp "$REPO_DIR/README.md" "$TARGET_DIR/SKILL.md"
+    echo -e "${GREEN}✅ Successfully copied base skill to $TARGET_DIR/SKILL.md${NC}"
+  else
+    echo -e "${RED}❌ Could not find base skill file in $REPO_DIR${NC}"
+    exit 1
+  fi
+  exit 0
+fi
 
 # ─── Parse Args ──────────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
