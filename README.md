@@ -56,6 +56,7 @@ minions init
 | `--parallel` | Run all prompts concurrently | - |
 | `--continue-on-error`| Don't abort the queue if a prompt fails | - |
 | `--model <model>` | Override the model used | - |
+| `--cli <name>` | Target AI CLI command | `pi` |
 | `--sandbox` | Run the CLI in sandbox mode | - |
 | `--delay <seconds>` | Delay between sequential prompts | `2` |
 | `--log-dir <dir>` | Directory to write run logs | `./runs/` |

@@ -23,6 +23,7 @@ DRY_RUN=false
 PARALLEL=false
 CONTINUE_ON_ERROR=false
 MODEL=""
+CLI="pi"
 SANDBOX=false
 DELAY=2
 LOG_DIR="./runs"
@@ -50,6 +51,7 @@ ${BOLD}OPTIONS${NC}
   --parallel               Run all prompts concurrently
   --continue-on-error      Don't abort on prompt failure
   --model <model>          Override AI model
+  --cli <name>             Target AI CLI command (default: pi)
   --sandbox                Run in sandbox mode
   --delay <seconds>        Wait between prompts (default: 2)
   --log-dir <dir>          Directory for run logs (default: ./runs/)
@@ -62,6 +64,7 @@ ${BOLD}PROMPT QUEUE FORMAT${NC} (YAML)
       prompt: "Your prompt here"
       workdir: /optional/override
       model: optional-model
+      cli: optional-cli
       approval_mode: optional-override
 
 ${BOLD}EXAMPLES${NC}
@@ -105,6 +108,7 @@ while [[ $# -gt 0 ]]; do
     --parallel)        PARALLEL=true; shift ;;
     --continue-on-error) CONTINUE_ON_ERROR=true; shift ;;
     --model)           MODEL="$2"; shift 2 ;;
+    --cli)             CLI="$2"; shift 2 ;;
     --sandbox)         SANDBOX=true; shift ;;
     --delay)           DELAY="$2"; shift 2 ;;
     --log-dir)         LOG_DIR="$2"; shift 2 ;;
@@ -117,7 +121,7 @@ done
 # ─── Validate ────────────────────────────────────────────────────────────────────
 [[ -z "$QUEUE_FILE" ]] && die "Missing required --queue <file.yaml>. Use --help for usage."
 [[ ! -f "$QUEUE_FILE" ]] && die "Queue file not found: $QUEUE_FILE"
-command -v gemini &>/dev/null || warn "Executable not found in path"
+command -v "$CLI" &>/dev/null || warn "Executable '$CLI' not found in path"
 
 case "$APPROVAL_MODE" in
   default|auto_edit|yolo) ;;
@@ -137,6 +141,7 @@ parse_queue() {
   local current_prompt=""
   local current_workdir=""
   local current_model=""
+  local current_cli=""
   local current_approval=""
   local item_index=0
 
@@ -144,6 +149,7 @@ parse_queue() {
   QUEUE_PROMPTS=()
   QUEUE_WORKDIRS=()
   QUEUE_MODELS=()
+  QUEUE_CLIS=()
   QUEUE_APPROVALS=()
 
   while IFS= read -r line || [[ -n "$line" ]]; do
@@ -170,6 +176,7 @@ parse_queue() {
         QUEUE_PROMPTS+=("$current_prompt")
         QUEUE_WORKDIRS+=("$current_workdir")
         QUEUE_MODELS+=("$current_model")
+        QUEUE_CLIS+=("$current_cli")
         QUEUE_APPROVALS+=("$current_approval")
         item_index=$((item_index + 1))
       fi
@@ -178,6 +185,7 @@ parse_queue() {
       current_prompt=""
       current_workdir=""
       current_model=""
+      current_cli=""
       current_approval=""
 
       # Check if key:value is on the same line as the dash
@@ -223,6 +231,12 @@ parse_queue() {
       current_model="${current_model%\"}"
       current_model="${current_model#\'}"
       current_model="${current_model%\'}"
+    elif [[ "$stripped" =~ ^[[:space:]]+cli:[[:space:]]*(.*) ]]; then
+      current_cli="${BASH_REMATCH[1]}"
+      current_cli="${current_cli#\"}"
+      current_cli="${current_cli%\"}"
+      current_cli="${current_cli#\'}"
+      current_cli="${current_cli%\'}"
     elif [[ "$stripped" =~ ^[[:space:]]+approval_mode:[[:space:]]*(.*) ]]; then
       current_approval="${BASH_REMATCH[1]}"
       current_approval="${current_approval#\"}"
@@ -238,18 +252,21 @@ parse_queue() {
     QUEUE_PROMPTS+=("$current_prompt")
     QUEUE_WORKDIRS+=("$current_workdir")
     QUEUE_MODELS+=("$current_model")
+    QUEUE_CLIS+=("$current_cli")
     QUEUE_APPROVALS+=("$current_approval")
   fi
 }
 
-# ─── Build Gemini Command ───────────────────────────────────────────────────────
-build_gemini_cmd() {
+# ─── Build CLI Command ────────────────────────────────────────────────────────
+build_cli_cmd() {
   local prompt="$1"
   local item_workdir="$2"
   local item_model="$3"
   local item_approval="$4"
+  local item_cli="$5"
 
-  local cmd=("gemini")
+  local target_cli="${item_cli:-$CLI}"
+  local cmd=("$target_cli")
 
   # Approval mode (per-prompt override or global)
   local approval="${item_approval:-$APPROVAL_MODE}"
@@ -293,6 +310,7 @@ main() {
   if [[ -n "$MODEL" ]]; then
     info "Model:     ${BOLD}$MODEL${NC}"
   fi
+  info "Target CLI:${BOLD}$CLI${NC}"
   if $SANDBOX; then
     info "Sandbox:   ${BOLD}enabled${NC}"
   fi
@@ -336,6 +354,7 @@ main() {
     local prompt="${QUEUE_PROMPTS[$i]}"
     local item_workdir="${QUEUE_WORKDIRS[$i]}"
     local item_model="${QUEUE_MODELS[$i]}"
+    local item_cli="${QUEUE_CLIS[$i]}"
     local item_approval="${QUEUE_APPROVALS[$i]}"
     local step_num=$((i + 1))
 
@@ -346,6 +365,7 @@ main() {
       local wd="${item_workdir:-$WORKDIR}"
       dim "  workdir: ${wd}"
       dim "  approval: ${item_approval:-$APPROVAL_MODE}"
+      dim "  cli: ${item_cli:-$CLI}"
       if [[ -n "$item_model" ]]; then
         dim "  model: ${item_model}"
       fi
@@ -365,8 +385,8 @@ main() {
     fi
 
     # Build the command
-    local gemini_cmd
-    gemini_cmd=$(build_gemini_cmd "$prompt" "$item_workdir" "$item_model" "$item_approval")
+    local run_cmd
+    run_cmd=$(build_cli_cmd "$prompt" "$item_workdir" "$item_model" "$item_approval" "$item_cli")
 
     # Log start
     local start_time
@@ -378,7 +398,7 @@ main() {
       echo "## [${step_num}/${total}] ${name}"
       echo "Start:   ${start_timestamp}"
       echo "Workdir: ${wd}"
-      echo "Command: ${gemini_cmd}"
+      echo "Command: ${run_cmd}"
       echo ""
     } >> "$log_file"
 
@@ -389,12 +409,12 @@ main() {
     local output_file="${LOG_DIR}/.prompt-${step_num}-output.tmp"
 
     if $PARALLEL; then
-      (cd "$wd" && eval "$gemini_cmd" > "$output_file" 2>&1; echo $? > "${output_file}.exit") &
+      (cd "$wd" && eval "$run_cmd" > "$output_file" 2>&1; echo $? > "${output_file}.exit") &
       PIDS[$i]=$!
       START_TIMES[$i]=$start_time
       continue
     fi
-    if (cd "$wd" && eval "$gemini_cmd" > "$output_file" 2>&1); then
+    if (cd "$wd" && eval "$run_cmd" > "$output_file" 2>&1); then
       exit_code=0
     else
       exit_code=$?
