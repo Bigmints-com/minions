@@ -88,7 +88,7 @@ fi
 # ─── CLI Selection Command ───────────────────────────────────────────────────────
 if [[ $# -gt 0 && "$1" == "cli" ]]; then
   echo -e "${CYAN}Scanning for installed AI CLIs...${NC}"
-  KNOWN_CLIS=("pi" "gemini" "claude" "chatgpt" "aider" "copilot" "fabric" "cursor-agent" "ubot")
+  KNOWN_CLIS=("pi" "gemini" "claude" "chatgpt" "aider" "copilot" "fabric" "cursor-agent" "ubot" "codex")
   INSTALLED=()
   for c in "${KNOWN_CLIS[@]}"; do
     if command -v "$c" &>/dev/null; then
@@ -282,6 +282,11 @@ parse_queue() {
 }
 
 # ─── Build CLI Command ────────────────────────────────────────────────────────
+# CLI interface reference (verified against --help output):
+#   pi:     pi --model <m> -p "<prompt>"                (positional prompt, -p = non-interactive)
+#   claude: claude -p --dangerously-skip-permissions --model <m> "<prompt>"
+#   gemini: gemini --model <m> -p "<prompt>" --yolo     (-p takes the prompt value, not a flag)
+#   codex:  codex exec --model <m> --dangerously-bypass-approvals-and-sandbox "<prompt>"
 build_cli_cmd() {
   local prompt="$1"
   local item_workdir="$2"
@@ -290,25 +295,63 @@ build_cli_cmd() {
   local item_cli="$5"
 
   local target_cli="${item_cli:-$CLI}"
-  local cmd=("$target_cli")
-
-  # Approval mode (per-prompt override or global)
   local approval="${item_approval:-$APPROVAL_MODE}"
-  cmd+=("--approval-mode" "$approval")
-
-  # Model (per-prompt override or global)
   local model="${item_model:-$MODEL}"
-  if [[ -n "$model" ]]; then
-    cmd+=("-m" "$model")
-  fi
+  local cmd=()
 
-  # Sandbox
-  if $SANDBOX; then
-    cmd+=("--sandbox")
-  fi
+  case "$target_cli" in
+    # ── pi ──────────────────────────────────────────────────────────────────
+    pi)
+      cmd+=("pi")
+      [[ -n "$model" ]] && cmd+=("--model" "$model")
+      cmd+=("-p")               # non-interactive
+      $SANDBOX && cmd+=("--no-tools")
+      cmd+=("$prompt")
+      ;;
 
-  # The prompt itself (as positional argument)
-  cmd+=("$prompt")
+    # ── claude ──────────────────────────────────────────────────────────────
+    claude)
+      cmd+=("claude" "-p")     # -p = non-interactive / print
+      cmd+=("--dangerously-skip-permissions")
+      [[ -n "$model" ]] && cmd+=("--model" "$model")
+      $SANDBOX && cmd+=("--sandbox")
+      cmd+=("$prompt")
+      ;;
+
+    # ── gemini ──────────────────────────────────────────────────────────────
+    gemini|gemini-cli)
+      cmd+=("gemini")
+      [[ -n "$model" ]] && cmd+=("-m" "$model")
+      if [[ "$approval" == "yolo" ]]; then
+        cmd+=("--yolo")
+      else
+        cmd+=("--approval-mode" "$approval")
+      fi
+      $SANDBOX && cmd+=("-s")
+      cmd+=("-p" "$prompt")     # -p takes the prompt value, not a boolean flag
+      ;;
+
+    # ── codex ────────────────────────────────────────────────────────────────
+    codex)
+      cmd+=("codex" "exec")    # exec = non-interactive subcommand
+      [[ -n "$model" ]] && cmd+=("-m" "$model")
+      if [[ "$approval" == "yolo" ]]; then
+        cmd+=("--dangerously-bypass-approvals-and-sandbox")
+      else
+        cmd+=("--full-auto")   # sandboxed auto execution
+      fi
+      cmd+=("$prompt")
+      ;;
+
+    # ── fallback ─────────────────────────────────────────────────────────────
+    *)
+      cmd+=("$target_cli")
+      [[ -n "$model" ]] && cmd+=("-m" "$model")
+      cmd+=("--approval-mode" "$approval")
+      $SANDBOX && cmd+=("--sandbox")
+      cmd+=("$prompt")
+      ;;
+  esac
 
   printf "%q " "${cmd[@]}"
 }
